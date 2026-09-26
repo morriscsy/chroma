@@ -195,18 +195,19 @@ export function PaletteStudio() {
 
   useEffect(() => {
     const saved = localStorage.getItem("chroma-music");
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    musicWanted.current = reduce ? saved === "on" : saved !== "off";
+    musicWanted.current = saved !== "off";
     const audio = new Audio(`${import.meta.env.BASE_URL}lofi.mp3`);
     audio.loop = true;
     audio.volume = 0.22;
     audio.preload = "auto";
+    audio.autoplay = true;
     audioRef.current = audio;
 
     const begin = () => {
       if (!musicWanted.current || !audio.paused) return;
       audio.play().then(() => setMusicOn(true)).catch(() => {});
     };
+    begin();
     const arm = (event: Event) => {
       const target = event.target;
       if (target instanceof Element && target.closest("[data-music]")) return;
