@@ -196,9 +196,9 @@ export function PaletteStudio() {
   useEffect(() => {
     const saved = localStorage.getItem("chroma-music");
     musicWanted.current = saved !== "off";
-    const audio = new Audio(`${import.meta.env.BASE_URL}lofi.mp3`);
+    const audio = new Audio(`${import.meta.env.BASE_URL}lofi.mp3?v=2`);
     audio.loop = true;
-    audio.volume = 0.22;
+    audio.volume = 0.42;
     audio.preload = "auto";
     audio.autoplay = true;
     audioRef.current = audio;
