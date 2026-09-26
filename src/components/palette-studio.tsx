@@ -576,19 +576,21 @@ export function PaletteStudio() {
 
         <section className="plates" data-open={platesOpen ? "true" : "false"}>
           <div className="grid-head">
-            <button
-              type="button"
-              className="plates-toggle"
-              aria-expanded={platesOpen}
-              onClick={() => setPlatesOpen((open) => !open)}
-            >
-              <span className="kind">{lockedCount === 0 ? "None locked" : `${lockedCount} locked`}</span>
-              <span className="plates-hint">{platesOpen ? "Hide values" : "Show hex, RGB, HSL"}</span>
-              <ChevronDown />
-            </button>
-            <button type="button" className="btn-text" onClick={unlockAll}>
-              Unlock all
-            </button>
+            <p className="kind">{lockedCount === 0 ? "None locked" : `${lockedCount} locked`}</p>
+            <div className="plates-actions">
+              <button
+                type="button"
+                className="plates-toggle"
+                aria-expanded={platesOpen}
+                onClick={() => setPlatesOpen((open) => !open)}
+              >
+                {platesOpen ? "Hide values" : "Expand colors"}
+                <ChevronDown />
+              </button>
+              <button type="button" className="btn-text" onClick={unlockAll}>
+                Unlock all
+              </button>
+            </div>
           </div>
 
           {platesOpen ? (
@@ -664,7 +666,7 @@ export function PaletteStudio() {
               })}
             </div>
           ) : (
-            <button type="button" className="plates-strip" onClick={() => setPlatesOpen(true)}>
+            <button type="button" className="plates-strip" aria-label="Expand colors" onClick={() => setPlatesOpen(true)}>
               {palette.map((swatch, index) => (
                 <span key={index} className="plates-chip" style={{ backgroundColor: swatch.hex }}>
                   <span>{index + 1}</span>

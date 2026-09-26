@@ -1044,40 +1044,50 @@
     justify-content: space-between;
     gap: 10px;
   }
+  .plates-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .plates-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
     min-height: 36px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
+    padding: 0 10px 0 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 62%, var(--color-line));
+    background: var(--color-accent);
+    color: #fff;
     font: inherit;
-    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-accent) 28%, transparent);
   }
   .plates-toggle svg {
     width: 16px;
     height: 16px;
-    color: var(--color-muted);
     transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .plates[data-open="true"] .plates-toggle {
+    background: #fff;
+    color: var(--color-fg);
+    border-color: var(--color-line);
+    box-shadow: none;
   }
   .plates[data-open="true"] .plates-toggle svg {
     transform: rotate(180deg);
-  }
-  .plates-hint {
-    color: var(--color-muted);
-    font-size: 0.78rem;
-    font-weight: 650;
   }
   .plates-strip {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 8px;
-    padding: 0;
-    border: 0;
-    background: transparent;
+    padding: 8px;
+    border-radius: 18px;
+    border: 1px dashed color-mix(in srgb, var(--color-accent) 55%, var(--color-line));
+    background: color-mix(in srgb, var(--color-accent) 6%, white);
   }
   .plates-chip {
     position: relative;
