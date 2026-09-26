@@ -1603,6 +1603,24 @@
     width: 16px;
     height: 16px;
   }
+  .music-btn[aria-pressed="true"] {
+    color: #fff;
+    background: var(--color-accent);
+    border-color: transparent;
+  }
+  .music-btn[aria-pressed="true"] svg {
+    animation: music-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes music-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
 }
 
 @keyframes plates-in {
@@ -1685,7 +1703,8 @@
 @media (prefers-reduced-motion: reduce) {
   .brand-dot,
   .mode-pill,
-  .plates-view {
+  .plates-view,
+  .music-btn svg {
     animation: none;
   }
   .mode-pill,

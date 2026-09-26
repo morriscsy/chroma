@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { flushSync } from "react-dom";
-import { Check, ChevronDown, Copy, Download, Lock, Shuffle, Undo2, Unlock } from "lucide-react";
+import { Check, ChevronDown, Copy, Download, Lock, Music, Shuffle, Undo2, Unlock } from "lucide-react";
 import {
   CANVAS,
   HARMONIES,
@@ -111,6 +111,9 @@ export function PaletteStudio() {
   const sliderDirty = useRef(false);
   const toastTimer = useRef<number>(0);
   const platesStageRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const musicWanted = useRef(true);
+  const [musicOn, setMusicOn] = useState(false);
   paletteRef.current = palette;
   locksRef.current = locks;
   harmonyRef.current = harmony;
@@ -188,6 +191,44 @@ export function PaletteStudio() {
       /* keep the plates collapsed */
     }
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("chroma-music");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    musicWanted.current = reduce ? saved === "on" : saved !== "off";
+    const audio = new Audio(`${import.meta.env.BASE_URL}lofi.mp3`);
+    audio.loop = true;
+    audio.volume = 0.22;
+    audio.preload = "auto";
+    audioRef.current = audio;
+
+    const begin = () => {
+      if (!musicWanted.current || !audio.paused) return;
+      audio.play().then(() => setMusicOn(true)).catch(() => {});
+    };
+    const arm = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-music]")) return;
+      begin();
+    };
+    const onHide = () => {
+      if (document.hidden) {
+        audio.pause();
+        return;
+      }
+      if (musicWanted.current) begin();
+    };
+    window.addEventListener("pointerdown", arm, true);
+    window.addEventListener("keydown", arm);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pointerdown", arm, true);
+      window.removeEventListener("keydown", arm);
+      document.removeEventListener("visibilitychange", onHide);
+      audio.pause();
+      audioRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -305,6 +346,21 @@ export function PaletteStudio() {
   function unlockAll() {
     setLocks([false, false, false, false, false]);
     flash("Unlocked all swatches", "unlock");
+  }
+
+  function toggleMusic() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused) {
+      musicWanted.current = false;
+      localStorage.setItem("chroma-music", "off");
+      audio.pause();
+      setMusicOn(false);
+      return;
+    }
+    musicWanted.current = true;
+    localStorage.setItem("chroma-music", "on");
+    audio.play().then(() => setMusicOn(true)).catch(() => {});
   }
 
   function setPlates(next: boolean) {
@@ -462,6 +518,16 @@ export function PaletteStudio() {
             ))}
           </div>
           <div className="nav-actions">
+            <button
+              type="button"
+              className="icon-btn music-btn"
+              data-music
+              aria-pressed={musicOn}
+              aria-label={musicOn ? "Pause chill music" : "Play chill music"}
+              onClick={toggleMusic}
+            >
+              <Music />
+            </button>
             <button type="button" className="icon-btn" onClick={undo} disabled={historyLen === 0} aria-label="Undo">
               <Undo2 />
             </button>
