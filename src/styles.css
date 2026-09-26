@@ -824,6 +824,194 @@
     border-radius: 50%;
     background: var(--c-mid);
   }
+  .grad-aurora,
+  .grad-hero {
+    background: linear-gradient(128deg, var(--s0) 0%, var(--s1) 42%, var(--s2) 78%, var(--s3) 100%);
+  }
+  .grad-waves {
+    background: linear-gradient(180deg, var(--s4), color-mix(in srgb, var(--s4) 70%, var(--s3)));
+  }
+  .grad-orbs,
+  .grad-glass {
+    background: linear-gradient(155deg, var(--s0), var(--s1) 55%, var(--s2));
+  }
+  .glow,
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .glow.g1 {
+    width: 78%;
+    aspect-ratio: 1;
+    right: -18%;
+    bottom: -28%;
+    background: radial-gradient(circle at 40% 40%, var(--s4), var(--s3) 42%, transparent 70%);
+  }
+  .glow.g2 {
+    width: 62%;
+    aspect-ratio: 1;
+    right: -8%;
+    top: -30%;
+    background: radial-gradient(circle at 45% 45%, color-mix(in srgb, var(--s3) 80%, white), var(--s2) 48%, transparent 72%);
+    opacity: 0.9;
+  }
+  .grad-copy {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+    padding: 5cqi;
+    max-width: 70%;
+  }
+  .grad-copy.top {
+    justify-content: flex-start;
+    max-width: 52%;
+  }
+  .grad-copy.end {
+    margin-left: auto;
+    justify-content: center;
+    text-align: right;
+    align-items: flex-end;
+    max-width: 48%;
+  }
+  .grad-copy strong {
+    font-size: 7.2cqi;
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+  }
+  .grad-copy em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--s3), var(--s4));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .grad-copy p {
+    margin: 1.6cqi 0 0;
+    font-size: 2.6cqi;
+    line-height: 1.35;
+    opacity: 0.86;
+  }
+  .wave-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .blob.b1 {
+    width: 48%;
+    aspect-ratio: 1;
+    left: 4%;
+    top: 16%;
+    background: radial-gradient(circle at 32% 30%, color-mix(in srgb, var(--s4) 85%, white), var(--s3) 46%, transparent 72%);
+  }
+  .blob.b2 {
+    width: 40%;
+    aspect-ratio: 1;
+    left: 22%;
+    top: 40%;
+    background: radial-gradient(circle at 40% 35%, var(--s2), var(--s1) 55%, transparent 74%);
+  }
+  .blob.b3 {
+    width: 26%;
+    aspect-ratio: 1;
+    left: 8%;
+    bottom: 6%;
+    background: radial-gradient(circle at 40% 40%, var(--s4), var(--s0) 70%);
+  }
+  .grad-hero,
+  .grad-glass {
+    aspect-ratio: 16 / 11;
+  }
+  .grad-hero {
+    display: flex;
+    flex-direction: column;
+  }
+  .grad-hero .grad-copy {
+    height: auto;
+    flex: 1;
+  }
+  .grad-hero header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.6cqi;
+    padding: 3.4cqi 4cqi 0;
+    font-size: 2.6cqi;
+    font-weight: 800;
+  }
+  .grad-hero header b {
+    width: 3cqi;
+    height: 3cqi;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .grad-hero header nav {
+    display: flex;
+    gap: 1.2cqi;
+  }
+  .grad-hero header nav i {
+    width: 5cqi;
+    height: 1.1cqi;
+    border-radius: 99px;
+    background: currentColor;
+    opacity: 0.45;
+  }
+  .grad-hero header em {
+    margin-left: auto;
+    font-style: normal;
+    border-radius: 99px;
+    padding: 0.7cqi 1.8cqi;
+    background: color-mix(in srgb, var(--s4) 88%, white);
+    color: var(--s0);
+    font-size: 2.2cqi;
+    font-weight: 800;
+  }
+  .grad-hero .grad-copy {
+    max-width: 78%;
+  }
+  .grad-glass {
+    display: grid;
+    place-items: center;
+  }
+  .glass-card {
+    position: relative;
+    z-index: 1;
+    width: min(78%, 46cqi);
+    padding: 4cqi 4.2cqi;
+    border-radius: 3cqi;
+    background: color-mix(in srgb, var(--s4) 42%, transparent);
+    border: 1px solid color-mix(in srgb, white 45%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2cqi 4cqi color-mix(in srgb, var(--s0) 25%, transparent);
+  }
+  .glass-card strong {
+    display: block;
+    font-size: 4.6cqi;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+  .glass-card p {
+    margin: 1.2cqi 0 0;
+    font-size: 2.3cqi;
+    line-height: 1.35;
+    opacity: 0.85;
+  }
+  .glass-card span {
+    display: flex;
+    gap: 1.2cqi;
+    margin-top: 2.2cqi;
+  }
+  .glass-card i {
+    height: 1.6cqi;
+    width: 8cqi;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--s1), var(--s3));
+  }
   .eyebrow {
     margin: 0;
     color: var(--color-cyan);

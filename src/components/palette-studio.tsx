@@ -659,7 +659,7 @@ export function PaletteStudio() {
           })}
         </div>
 
-        <PaletteUses palette={palette} />
+        <PaletteUses palette={palette} gradient={harmony === "gradient"} />
 
         <section className="panel" aria-label="CSS variables">
           <div className="panel-head">
@@ -737,7 +737,151 @@ function inkFor(bg: Swatch, options: Swatch[]) {
   return contrastRatio(bg.rgb, PAPER) >= contrastRatio(bg.rgb, INK) ? "#E8EEF9" : "#0B1220";
 }
 
-function PaletteUses({ palette }: { palette: Swatch[] }) {
+function fieldInk(swatch: Swatch) {
+  return swatch.hsl.l > 58 ? "#16141f" : "#f6f3ff";
+}
+
+function GradientIdeas({ palette }: { palette: Swatch[] }) {
+  const [a, b, c, d, e] = palette;
+  const s0 = a ?? palette[0]!;
+  const s1 = b ?? s0;
+  const s2 = c ?? s1;
+  const s3 = d ?? s2;
+  const s4 = e ?? s3;
+  const tone = {
+    "--s0": s0.hex,
+    "--s1": s1.hex,
+    "--s2": s2.hex,
+    "--s3": s3.hex,
+    "--s4": s4.hex,
+  } as CSSProperties;
+  const onDark = fieldInk(s0);
+  const onLight = fieldInk(s4);
+
+  return (
+    <section className="uses" aria-label="Gradient design suggestions">
+      <div className="use-board">
+        <div className="use-lane">
+          <div className="use-lane-head">
+            <span className="use-mark" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </span>
+            <h2>Slides</h2>
+          </div>
+          <div className="slide-row">
+            <figure className="use-card">
+              <div className="use-frame grad-aurora" style={{ ...tone, color: onDark }}>
+                <i className="glow g1" />
+                <i className="glow g2" />
+                <div className="grad-copy">
+                  <strong>
+                    Open
+                    <br />
+                    <em>the room</em>
+                  </strong>
+                  <p>Where this ramp begins.</p>
+                </div>
+              </div>
+              <figcaption>Aurora field</figcaption>
+            </figure>
+            <figure className="use-card">
+              <div className="use-frame grad-waves" style={{ ...tone, color: onLight }}>
+                <svg className="wave-svg" viewBox="0 0 400 225" preserveAspectRatio="none" aria-hidden>
+                  <defs>
+                    <linearGradient id="wave-deep" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stopColor={s0.hex} />
+                      <stop offset="1" stopColor={s2.hex} />
+                    </linearGradient>
+                    <linearGradient id="wave-soft" x1="1" y1="0" x2="0" y2="1">
+                      <stop offset="0" stopColor={s2.hex} />
+                      <stop offset="1" stopColor={s3.hex} />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0 92 C70 40 130 150 210 98 C290 46 340 70 400 48 V225 H0 Z" fill="url(#wave-deep)" />
+                  <path d="M0 150 C90 112 170 196 260 146 C330 110 370 128 400 118 V225 H0 Z" fill="url(#wave-soft)" opacity="0.95" />
+                </svg>
+                <div className="grad-copy top">
+                  <strong>Soft current</strong>
+                  <p>Two waves, one ramp.</p>
+                </div>
+              </div>
+              <figcaption>Flowing waves</figcaption>
+            </figure>
+            <figure className="use-card">
+              <div className="use-frame grad-orbs" style={{ ...tone, color: onDark }}>
+                <i className="blob b1" />
+                <i className="blob b2" />
+                <i className="blob b3" />
+                <div className="grad-copy end">
+                  <strong>In motion</strong>
+                  <p>Overlapping stops.</p>
+                </div>
+              </div>
+              <figcaption>Overlapping orbs</figcaption>
+            </figure>
+          </div>
+        </div>
+        <div className="use-lane">
+          <div className="use-lane-head">
+            <span className="use-window" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </span>
+            <h2>Website</h2>
+          </div>
+          <div className="site-row">
+            <figure className="use-card">
+              <div className="use-frame grad-hero" style={{ ...tone, color: onDark }}>
+                <i className="glow g2" />
+                <header>
+                  <b />
+                  <span>North</span>
+                  <nav>
+                    <i />
+                    <i />
+                    <i />
+                  </nav>
+                  <em>Enter</em>
+                </header>
+                <div className="grad-copy">
+                  <strong>
+                    A page that
+                    <br />
+                    <em>fades, not blocks</em>
+                  </strong>
+                  <p>Nav, headline, and one action on the same wash.</p>
+                </div>
+              </div>
+              <figcaption>Gradient hero</figcaption>
+            </figure>
+            <figure className="use-card">
+              <div className="use-frame grad-glass" style={{ ...tone, color: onLight }}>
+                <i className="blob b1" />
+                <i className="blob b2" />
+                <div className="glass-card">
+                  <strong>Stay in the wash</strong>
+                  <p>A glass panel over the ramp, not a new color.</p>
+                  <span>
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                </div>
+              </div>
+              <figcaption>Glass on a wash</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PaletteUses({ palette, gradient }: { palette: Swatch[]; gradient: boolean }) {
+  if (gradient) return <GradientIdeas palette={palette} />;
   const ranked = [...palette].sort((a, b) => a.hsl.l - b.hsl.l);
   const bg = ranked[0] ?? palette[0]!;
   const surface = ranked[1] ?? bg;
