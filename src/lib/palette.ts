@@ -9,19 +9,9 @@ export type Swatch = {
 
 export const HARMONIES = [
   {
-    id: "analogous",
-    label: "Analog",
-    tip: "Neighbors on the color wheel, like blue, cyan, and teal. Calm and related.",
-  },
-  {
     id: "complementary",
     label: "Complement",
     tip: "Opposites on the wheel, like blue and orange. Strong contrast.",
-  },
-  {
-    id: "triadic",
-    label: "Triad",
-    tip: "Three colors spaced evenly, like a triangle. Lively but still balanced.",
   },
   {
     id: "split",
@@ -32,11 +22,6 @@ export const HARMONIES = [
     id: "mono",
     label: "Mono",
     tip: "One color only, from dark to light. Safe for backgrounds, text, and buttons.",
-  },
-  {
-    id: "free",
-    label: "Free",
-    tip: "Unrelated colors with no matching rule. Use it when you want a surprise.",
   },
   {
     id: "gradient",
@@ -284,18 +269,12 @@ function huesFor(harmony: Harmony, base: number, rng: () => number) {
   const shift = (offsets: number[], spread: number) =>
     offsets.map((offset) => hueNorm(base + offset + jitter(rng, spread)));
   switch (harmony) {
-    case "analogous":
-      return shift([-28, -14, 0, 14, 28], 6);
     case "complementary":
       return shift([0, 16, 180, 196, -22], 4);
-    case "triadic":
-      return shift([0, 120, 240, 14, 134], 4);
     case "split":
       return shift([0, 150, 210, 166, 194], 4);
     case "mono":
       return shift([0, 0, 0, 0, 0], 2);
-    case "free":
-      return shift([0, 0, 0, 0, 0], 0);
     default:
       return shift([0, 24, 48, 72, 96], 4);
   }
@@ -352,16 +331,6 @@ export function generatePalette(
     if (locks[index]) continue;
     const role = roles[index] ?? ROLES[index]!;
     let hue = planned[index] ?? base;
-    if (harmony === "free") {
-      hue = Math.floor(rng() * 360);
-      for (let attempt = 0; attempt < 36; attempt += 1) {
-        const candidate = Math.floor(rng() * 360);
-        if (taken.every((used) => hueDistance(used, candidate) >= 28)) {
-          hue = candidate;
-          break;
-        }
-      }
-    }
     let sat = clamp(role.s + jitter(rng, harmony === "mono" ? 4 : 8), harmony === "mono" ? 22 : 36, 92);
     let light = clamp(role.l + jitter(rng, 3), 8, 94);
     const clash = taken.some((used) => hueDistance(used, hue) < 14 && Math.abs(light - (current.find((s) => s.hsl.h === used)?.hsl.l ?? 50)) < 12);

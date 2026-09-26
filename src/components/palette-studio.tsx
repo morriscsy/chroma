@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Download, Lock, Shuffle, Undo2, Unlock } from "lucide-react";
 import {
   CANVAS,
@@ -7,6 +7,7 @@ import {
   PAPER,
   SEED_PALETTE,
   cloneSwatch,
+  contrastRatio,
   contrastReport,
   formatHsl,
   formatRgb,
@@ -29,13 +30,6 @@ function rgbCss(rgb: { r: number; g: number; b: number }) {
   return `rgb(${rgb.r} ${rgb.g} ${rgb.b})`;
 }
 
-function gradeClass(grade: string) {
-  if (grade === "AAA") return "grade grade-aaa";
-  if (grade === "AA") return "grade grade-aa";
-  if (grade === "AA lg") return "grade grade-lg";
-  return "grade grade-fail";
-}
-
 function loadSaved(): { palette: Swatch[]; locks: boolean[]; harmony: Harmony } | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -55,11 +49,30 @@ function loadSaved(): { palette: Swatch[]; locks: boolean[]; harmony: Harmony } 
         Array.isArray(data.locks) && data.locks.length === 5
           ? data.locks.map(Boolean)
           : [false, false, false, false, false],
-      harmony: isHarmony(data.harmony) ? data.harmony : "analogous",
+      harmony: isHarmony(data.harmony) ? data.harmony : "complementary",
     };
   } catch {
     return null;
   }
+}
+
+function hashSeed(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let next = Math.imul(state ^ (state >>> 15), 1 | state);
+    next = (next + Math.imul(next ^ (next >>> 7), 61 | next)) ^ next;
+    return ((next ^ (next >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 function fallbackCopy(value: string) {
@@ -77,7 +90,7 @@ function fallbackCopy(value: string) {
 export function PaletteStudio() {
   const [palette, setPalette] = useState<Swatch[]>(SEED_PALETTE);
   const [locks, setLocks] = useState<boolean[]>([false, false, false, false, false]);
-  const [harmony, setHarmony] = useState<Harmony>("analogous");
+  const [harmony, setHarmony] = useState<Harmony>("complementary");
   const [selected, setSelected] = useState(0);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -85,9 +98,12 @@ export function PaletteStudio() {
   const [hydrated, setHydrated] = useState(false);
   const [gradients, setGradients] = useState<Swatch[][]>([]);
   const [activeGradient, setActiveGradient] = useState(0);
+  const [openTip, setOpenTip] = useState<Harmony | null>(null);
   const paletteRef = useRef(palette);
   const locksRef = useRef(locks);
   const harmonyRef = useRef(harmony);
+  const modesRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLSpanElement>(null);
   const historyRef = useRef<Swatch[][]>([]);
   const sliderDirty = useRef(false);
   const toastTimer = useRef<number>(0);
@@ -95,8 +111,63 @@ export function PaletteStudio() {
   locksRef.current = locks;
   harmonyRef.current = harmony;
 
+  useLayoutEffect(() => {
+    const nav = modesRef.current;
+    const pill = pillRef.current;
+    if (!nav || !pill) return;
+    const id = openTip ?? harmony;
+    const btn = nav.querySelector<HTMLButtonElement>(`[data-harmony="${id}"]`);
+    if (!btn) return;
+    const navBox = nav.getBoundingClientRect();
+    const box = btn.getBoundingClientRect();
+    pill.style.width = `${box.width}px`;
+    pill.style.height = `${box.height}px`;
+    pill.style.transform = `translate(${box.left - navBox.left - nav.clientLeft}px, ${box.top - navBox.top - nav.clientTop}px)`;
+    const frame = requestAnimationFrame(() => nav.classList.add("is-ready"));
+    return () => cancelAnimationFrame(frame);
+  }, [openTip, harmony]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const nav = modesRef.current;
+      const pill = pillRef.current;
+      if (!nav || !pill) return;
+      const id = openTip ?? harmonyRef.current;
+      const btn = nav.querySelector<HTMLButtonElement>(`[data-harmony="${id}"]`);
+      if (!btn) return;
+      const navBox = nav.getBoundingClientRect();
+      const box = btn.getBoundingClientRect();
+      pill.style.width = `${box.width}px`;
+      pill.style.height = `${box.height}px`;
+      pill.style.transform = `translate(${box.left - navBox.left - nav.clientLeft}px, ${box.top - navBox.top - nav.clientTop}px)`;
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [openTip]);
+
   const css = useMemo(() => toCssVariables(palette), [palette]);
   const selectedSwatch = palette[selected] ?? palette[0]!;
+  const drafts = useMemo(() => {
+    const seedBase = hashSeed(`${palette.map((swatch) => swatch.hex).join("")}|${locks.map((locked) => (locked ? "1" : "0")).join("")}`);
+    const frames = {} as Record<Harmony, Swatch[]>;
+    let gradientDrafts: Swatch[][] = [];
+    for (const item of HARMONIES) {
+      if (item.id === harmony) {
+        frames[item.id] = palette;
+        continue;
+      }
+      const rng = mulberry32(seedBase ^ hashSeed(item.id));
+      if (item.id === "gradient") {
+        gradientDrafts = gradientChoices(palette, locks, rng);
+        frames.gradient = gradientDrafts[0] ?? palette;
+      } else {
+        frames[item.id] = generatePalette(item.id, palette, locks, rng);
+      }
+    }
+    return { frames, gradientDrafts };
+  }, [palette, locks, harmony]);
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
 
   useEffect(() => {
     const saved = loadSaved();
@@ -226,19 +297,27 @@ export function PaletteStudio() {
   }
 
   function selectHarmony(next: Harmony) {
+    if (next === harmonyRef.current) {
+      shuffle();
+      return;
+    }
+    const draft = draftsRef.current.frames[next] ?? paletteRef.current;
     setHarmony(next);
     if (next === "gradient") {
-      const choices = gradientChoices(paletteRef.current, locksRef.current);
-      setGradients(choices);
+      const choices =
+        draftsRef.current.gradientDrafts.length > 0
+          ? draftsRef.current.gradientDrafts
+          : gradientChoices(paletteRef.current, locksRef.current);
+      setGradients(choices.map((row) => row.map(cloneSwatch)));
       setActiveGradient(0);
       if (locksRef.current.every(Boolean)) return;
       pushHistory();
-      setPalette(choices[0] ?? paletteRef.current);
+      setPalette((choices[0] ?? draft).map(cloneSwatch));
       return;
     }
     if (locksRef.current.every(Boolean)) return;
     pushHistory();
-    setPalette(generatePalette(next, paletteRef.current, locksRef.current));
+    setPalette(draft.map(cloneSwatch));
   }
 
   function applyGradient(index: number) {
@@ -301,20 +380,44 @@ export function PaletteStudio() {
             <span className="brand-dot" aria-hidden />
             <span className="brand-name">Chroma</span>
           </a>
-          <div className="modes" role="toolbar" aria-label="Harmony">
+          <div
+            className="modes"
+            role="toolbar"
+            aria-label="Harmony"
+            ref={modesRef}
+            onPointerLeave={() => setOpenTip(null)}
+            onBlur={(event) => {
+              const next = event.relatedTarget;
+              if (next instanceof Node && event.currentTarget.contains(next)) return;
+              setOpenTip(null);
+            }}
+          >
+            <span className="mode-pill" ref={pillRef} aria-hidden />
             {HARMONIES.map((item) => (
-              <span key={item.id} className="mode-wrap">
+              <span key={item.id} className="mode-wrap" onPointerEnter={() => setOpenTip(item.id)}>
                 <button
                   type="button"
                   className="mode"
+                  data-harmony={item.id}
                   aria-pressed={harmony === item.id}
                   aria-describedby={`harmony-tip-${item.id}`}
+                  onFocus={() => setOpenTip(item.id)}
                   onClick={() => selectHarmony(item.id)}
                 >
                   {item.label}
                 </button>
-                <span className="mode-tip" id={`harmony-tip-${item.id}`} role="tooltip">
-                  {item.tip}
+                <span
+                  className="mode-tip"
+                  id={`harmony-tip-${item.id}`}
+                  role="tooltip"
+                  data-open={openTip === item.id ? "true" : "false"}
+                >
+                  <span className={item.id === "gradient" ? "tip-frames tip-frames-ramp" : "tip-frames"} aria-hidden>
+                    {(drafts.frames[item.id] ?? palette).map((swatch, index) => (
+                      <span key={index} className="tip-frame" style={{ backgroundColor: swatch.hex }} />
+                    ))}
+                  </span>
+                  <span className="tip-copy">{item.tip}</span>
                 </span>
               </span>
             ))}
@@ -332,8 +435,8 @@ export function PaletteStudio() {
       </header>
 
       <main className="wrap" id="palette">
-        <section className={harmony === "gradient" && gradients.length > 0 ? "intro intro-split" : "intro"}>
-          <div>
+        <section className={harmony === "gradient" && gradients.length > 0 ? "stage has-ramps" : "stage"}>
+          <div className="intro-copy">
             <p className="eyebrow">Palette studio</p>
             <h1>Five colors. Lock what you love.</h1>
             <p className="sub">
@@ -364,6 +467,98 @@ export function PaletteStudio() {
               </div>
             </aside>
           ) : null}
+          <section className="tune-dock" aria-label="Adjust selected swatch">
+            <div className="tune-head">
+              <p className="kind">Fine tune</p>
+              <div className="tune-picks" role="group" aria-label="Choose swatch">
+                {palette.map((swatch, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className="tune-pick"
+                    style={{ backgroundColor: swatch.hex, color: swatch.hsl.l > 62 ? "#0B1220" : "#fff" }}
+                    aria-pressed={selected === index}
+                    aria-label={`Fine tune swatch ${index + 1}`}
+                    onClick={() => setSelected(index)}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+              <span className="tune-hex">{selectedSwatch.hex}</span>
+            </div>
+            <div className="sliders tune-sliders">
+              <label>
+                <span className="slider-label">
+                  Hue <b>{selectedSwatch.hsl.h}</b>
+                </span>
+                <span className="slider-wrap">
+                  <span className="slider-track" />
+                  <input
+                    className="slider"
+                    type="range"
+                    min={0}
+                    max={360}
+                    value={selectedSwatch.hsl.h}
+                    aria-label="Hue"
+                    onFocus={() => {
+                      sliderDirty.current = false;
+                    }}
+                    onBlur={() => {
+                      sliderDirty.current = false;
+                    }}
+                    onChange={(event) => updateChannel("h", Number(event.target.value))}
+                  />
+                </span>
+              </label>
+              <label>
+                <span className="slider-label">
+                  Sat <b>{selectedSwatch.hsl.s}%</b>
+                </span>
+                <span className="slider-wrap">
+                  <span className="slider-track" style={{ background: satTrack }} />
+                  <input
+                    className="slider"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={selectedSwatch.hsl.s}
+                    aria-label="Saturation"
+                    onFocus={() => {
+                      sliderDirty.current = false;
+                    }}
+                    onBlur={() => {
+                      sliderDirty.current = false;
+                    }}
+                    onChange={(event) => updateChannel("s", Number(event.target.value))}
+                  />
+                </span>
+              </label>
+              <label>
+                <span className="slider-label">
+                  Light <b>{selectedSwatch.hsl.l}%</b>
+                </span>
+                <span className="slider-wrap">
+                  <span className="slider-track" style={{ background: lightTrack }} />
+                  <input
+                    className="slider"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={selectedSwatch.hsl.l}
+                    aria-label="Lightness"
+                    onFocus={() => {
+                      sliderDirty.current = false;
+                    }}
+                    onBlur={() => {
+                      sliderDirty.current = false;
+                    }}
+                    onChange={(event) => updateChannel("l", Number(event.target.value))}
+                  />
+                </span>
+              </label>
+            </div>
+          </section>
         </section>
 
         <div className="palette-rail" role="group" aria-label="All five swatches">
@@ -458,105 +653,13 @@ export function PaletteStudio() {
                       copyText(formatHsl(swatch.hsl), `hsl-${index}`, `Copied ${formatHsl(swatch.hsl)}`, swatch.hex);
                     }}
                   />
-                  <ul className="contrast">
-                    {report.rows.map((row) => (
-                      <li key={row.id}>
-                        <span>{row.label}</span>
-                        <span className="ratio">{row.ratio.toFixed(2)}</span>
-                        <span className={gradeClass(row.grade)} title={row.hint}>
-                          {row.grade}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               </article>
             );
           })}
         </div>
 
-        <section className="panel" aria-label="Adjust selected swatch">
-          <div className="panel-head">
-            <div>
-              <p className="kind">Swatch {selected + 1}</p>
-              <h2>Fine tune</h2>
-            </div>
-            <span className="sample-meta" style={{ color: "var(--color-muted)" }}>
-              {selectedSwatch.hex}
-            </span>
-          </div>
-          <div className="sliders">
-            <label>
-              <span className="slider-label">
-                Hue <b>{selectedSwatch.hsl.h}</b>
-              </span>
-              <span className="slider-wrap">
-                <span className="slider-track" />
-                <input
-                  className="slider"
-                  type="range"
-                  min={0}
-                  max={360}
-                  value={selectedSwatch.hsl.h}
-                  aria-label="Hue"
-                  onFocus={() => {
-                    sliderDirty.current = false;
-                  }}
-                  onBlur={() => {
-                    sliderDirty.current = false;
-                  }}
-                  onChange={(event) => updateChannel("h", Number(event.target.value))}
-                />
-              </span>
-            </label>
-            <label>
-              <span className="slider-label">
-                Saturation <b>{selectedSwatch.hsl.s}%</b>
-              </span>
-              <span className="slider-wrap">
-                <span className="slider-track" style={{ background: satTrack }} />
-                <input
-                  className="slider"
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={selectedSwatch.hsl.s}
-                  aria-label="Saturation"
-                  onFocus={() => {
-                    sliderDirty.current = false;
-                  }}
-                  onBlur={() => {
-                    sliderDirty.current = false;
-                  }}
-                  onChange={(event) => updateChannel("s", Number(event.target.value))}
-                />
-              </span>
-            </label>
-            <label>
-              <span className="slider-label">
-                Lightness <b>{selectedSwatch.hsl.l}%</b>
-              </span>
-              <span className="slider-wrap">
-                <span className="slider-track" style={{ background: lightTrack }} />
-                <input
-                  className="slider"
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={selectedSwatch.hsl.l}
-                  aria-label="Lightness"
-                  onFocus={() => {
-                    sliderDirty.current = false;
-                  }}
-                  onBlur={() => {
-                    sliderDirty.current = false;
-                  }}
-                  onChange={(event) => updateChannel("l", Number(event.target.value))}
-                />
-              </span>
-            </label>
-          </div>
-        </section>
+        <PaletteUses palette={palette} />
 
         <section className="panel" aria-label="CSS variables">
           <div className="panel-head">
@@ -619,6 +722,123 @@ export function PaletteStudio() {
 }
 
 const CYAN_DOT = { r: 34, g: 211, b: 238 };
+
+function inkFor(bg: Swatch, options: Swatch[]) {
+  let bestHex = options[0]?.hex ?? "#E8EEF9";
+  let best = 0;
+  for (const option of options) {
+    const score = contrastRatio(bg.rgb, option.rgb);
+    if (score > best) {
+      best = score;
+      bestHex = option.hex;
+    }
+  }
+  if (best >= 4.5) return bestHex;
+  return contrastRatio(bg.rgb, PAPER) >= contrastRatio(bg.rgb, INK) ? "#E8EEF9" : "#0B1220";
+}
+
+function PaletteUses({ palette }: { palette: Swatch[] }) {
+  const ranked = [...palette].sort((a, b) => a.hsl.l - b.hsl.l);
+  const bg = ranked[0] ?? palette[0]!;
+  const surface = ranked[1] ?? bg;
+  const mid = ranked[2] ?? surface;
+  const soft = ranked[3] ?? mid;
+  const paper = ranked[4] ?? soft;
+  const on = (color: Swatch) => inkFor(color, ranked);
+
+  return (
+    <section className="uses" aria-label="Suggested designs">
+      <div className="use-board">
+        <div className="use-lane">
+          <div className="use-lane-head">
+            <span className="use-mark" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </span>
+            <h2>Slides</h2>
+          </div>
+          <div className="slide-row">
+            <div className="use-frame slide-title" style={{ background: bg.hex, color: on(bg) }}>
+              <span style={{ color: mid.hex }}>Presentation</span>
+              <strong>Quarterly review</strong>
+              <i style={{ background: mid.hex }} />
+              <span className="slide-dots">
+                {ranked.map((swatch, index) => (
+                  <b key={index} style={{ background: swatch.hex }} />
+                ))}
+              </span>
+            </div>
+            <div className="use-frame slide-split" style={{ background: paper.hex, color: on(paper) }}>
+              <aside style={{ background: bg.hex }} />
+              <div>
+                <strong>Agenda</strong>
+                {[
+                  ["01", "Direction", mid],
+                  ["02", "Product", soft],
+                  ["03", "Launch", surface],
+                ].map(([num, label, chip]) => (
+                  <span key={String(label)}>
+                    <b style={{ background: (chip as Swatch).hex, color: on(chip as Swatch) }}>{num as string}</b>
+                    {label as string}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="use-frame slide-quote" style={{ background: mid.hex, color: on(mid) }}>
+              <span className="slide-mark">“</span>
+              <p>Make the first screen feel inevitable.</p>
+              <i style={{ background: bg.hex }} />
+            </div>
+          </div>
+        </div>
+        <div className="use-lane">
+          <div className="use-lane-head">
+            <span className="use-window" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </span>
+            <h2>Website</h2>
+          </div>
+          <div className="site-row">
+            <div className="use-frame web-hero" style={{ background: surface.hex, color: on(surface) }}>
+              <header style={{ background: bg.hex, color: on(bg) }}>
+                <b style={{ background: mid.hex }} />
+                <span>Chroma</span>
+                <em style={{ background: mid.hex, color: on(mid) }}>Start</em>
+              </header>
+              <div>
+                <strong>A calmer homepage</strong>
+                <span className="web-pills">
+                  <i style={{ background: soft.hex }} />
+                  <i style={{ background: paper.hex }} />
+                </span>
+              </div>
+            </div>
+            <div className="use-frame web-cards" style={{ background: paper.hex, color: on(paper) }}>
+              <header>
+                <b style={{ background: mid.hex }} />
+                Studio
+              </header>
+              <div>
+                {[
+                  [bg, "Lock"],
+                  [mid, "Check"],
+                  [soft, "Export"],
+                ].map(([chip, label]) => (
+                  <span key={String(label)} style={{ background: (chip as Swatch).hex, color: on(chip as Swatch) }}>
+                    {label as string}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function LockGlyph({ locked }: { locked: boolean }) {
   return (
