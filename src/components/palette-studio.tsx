@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Check, Copy, Download, Lock, Shuffle, Undo2, Unlock } from "lucide-react";
 import {
   CANVAS,
@@ -745,6 +745,18 @@ function PaletteUses({ palette }: { palette: Swatch[] }) {
   const soft = ranked[3] ?? mid;
   const paper = ranked[4] ?? soft;
   const on = (color: Swatch) => inkFor(color, ranked);
+  const tone = {
+    "--c-bg": bg.hex,
+    "--c-surface": surface.hex,
+    "--c-mid": mid.hex,
+    "--c-soft": soft.hex,
+    "--c-paper": paper.hex,
+    "--c-on-bg": on(bg),
+    "--c-on-surface": on(surface),
+    "--c-on-mid": on(mid),
+    "--c-on-soft": on(soft),
+    "--c-on-paper": on(paper),
+  } as CSSProperties;
 
   return (
     <section className="uses" aria-label="Suggested designs">
@@ -759,37 +771,80 @@ function PaletteUses({ palette }: { palette: Swatch[] }) {
             <h2>Slides</h2>
           </div>
           <div className="slide-row">
-            <div className="use-frame slide-title" style={{ background: bg.hex, color: on(bg) }}>
-              <span style={{ color: mid.hex }}>Presentation</span>
-              <strong>Quarterly review</strong>
-              <i style={{ background: mid.hex }} />
-              <span className="slide-dots">
-                {ranked.map((swatch, index) => (
-                  <b key={index} style={{ background: swatch.hex }} />
-                ))}
-              </span>
-            </div>
-            <div className="use-frame slide-split" style={{ background: paper.hex, color: on(paper) }}>
-              <aside style={{ background: bg.hex }} />
-              <div>
-                <strong>Agenda</strong>
-                {[
-                  ["01", "Direction", mid],
-                  ["02", "Product", soft],
-                  ["03", "Launch", surface],
-                ].map(([num, label, chip]) => (
-                  <span key={String(label)}>
-                    <b style={{ background: (chip as Swatch).hex, color: on(chip as Swatch) }}>{num as string}</b>
-                    {label as string}
-                  </span>
-                ))}
+            <figure className="use-card">
+              <div className="use-frame deck-cover" style={{ ...tone, background: bg.hex, color: on(bg) }}>
+                <div className="deck-copy">
+                  <span>Pitch</span>
+                  <strong>
+                    Business
+                    <br />
+                    presentation
+                  </strong>
+                  <p>A yearly story, told in one opening frame.</p>
+                  <em>Company · 2026</em>
+                </div>
+                <div className="orbit" aria-hidden>
+                  <i className="ring" />
+                  <i className="ring inner" />
+                  <i className="wedge" />
+                  <b>
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                      <path d="M3 11.2 21 3l-7.2 18-2.4-7.4z" fill="currentColor" />
+                    </svg>
+                  </b>
+                </div>
               </div>
-            </div>
-            <div className="use-frame slide-quote" style={{ background: mid.hex, color: on(mid) }}>
-              <span className="slide-mark">“</span>
-              <p>Make the first screen feel inevitable.</p>
-              <i style={{ background: bg.hex }} />
-            </div>
+              <figcaption>Cover · title and target</figcaption>
+            </figure>
+            <figure className="use-card">
+              <div className="use-frame deck-growth" style={{ ...tone, background: paper.hex, color: on(paper) }}>
+                <div className="stat-col">
+                  {[
+                    ["28%", "Now"],
+                    ["54%", "Year"],
+                    ["19%", "Next"],
+                  ].map(([value, label]) => (
+                    <span key={label}>
+                      <b>{value}</b>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                <div className="curve-panel">
+                  <strong>Growth line</strong>
+                  <ul>
+                    <li>New markets</li>
+                    <li>Repeat use</li>
+                    <li>Retention</li>
+                  </ul>
+                </div>
+              </div>
+              <figcaption>Stats beside a curve</figcaption>
+            </figure>
+            <figure className="use-card">
+              <div className="use-frame deck-story" style={{ ...tone, background: surface.hex, color: on(surface) }}>
+                <header>
+                  <strong>History</strong>
+                  <span>Story of the day</span>
+                </header>
+                <ol>
+                  <li>
+                    <b>01</b> Direction
+                  </li>
+                  <li>
+                    <b>02</b> Product
+                  </li>
+                  <li>
+                    <b>03</b> Launch
+                  </li>
+                </ol>
+                <blockquote>
+                  <span>“</span>
+                  Make the first screen feel inevitable.
+                </blockquote>
+              </div>
+              <figcaption>List and quote</figcaption>
+            </figure>
           </div>
         </div>
         <div className="use-lane">
@@ -802,37 +857,66 @@ function PaletteUses({ palette }: { palette: Swatch[] }) {
             <h2>Website</h2>
           </div>
           <div className="site-row">
-            <div className="use-frame web-hero" style={{ background: surface.hex, color: on(surface) }}>
-              <header style={{ background: bg.hex, color: on(bg) }}>
-                <b style={{ background: mid.hex }} />
-                <span>Chroma</span>
-                <em style={{ background: mid.hex, color: on(mid) }}>Start</em>
-              </header>
-              <div>
-                <strong>A calmer homepage</strong>
-                <span className="web-pills">
-                  <i style={{ background: soft.hex }} />
-                  <i style={{ background: paper.hex }} />
-                </span>
-              </div>
-            </div>
-            <div className="use-frame web-cards" style={{ background: paper.hex, color: on(paper) }}>
-              <header>
-                <b style={{ background: mid.hex }} />
-                Studio
-              </header>
-              <div>
-                {[
-                  [bg, "Lock"],
-                  [mid, "Check"],
-                  [soft, "Export"],
-                ].map(([chip, label]) => (
-                  <span key={String(label)} style={{ background: (chip as Swatch).hex, color: on(chip as Swatch) }}>
-                    {label as string}
+            <figure className="use-card">
+              <div className="use-frame site-landing" style={{ ...tone, background: paper.hex, color: on(paper) }}>
+                <header>
+                  <b />
+                  <span>Studio</span>
+                  <nav>
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </nav>
+                  <em>Book</em>
+                  <strong>Start</strong>
+                </header>
+                <div className="site-hero">
+                  <h3>
+                    Build tomorrow’s
+                    <br />
+                    landscape today
+                  </h3>
+                  <p>A clear offer, a short proof line, and one action above the fold.</p>
+                </div>
+                <div className="site-media">
+                  <span className="float-card">
+                    <b>Feature</b>
+                    Open the work
                   </span>
-                ))}
+                </div>
               </div>
-            </div>
+              <figcaption>Landing · nav, headline, media</figcaption>
+            </figure>
+            <figure className="use-card">
+              <div className="use-frame site-product" style={{ ...tone, background: soft.hex, color: on(soft) }}>
+                <header>
+                  <b />
+                  <span>Payr</span>
+                  <nav>
+                    <i />
+                    <i />
+                    <i />
+                  </nav>
+                  <em>Log in</em>
+                  <strong>Sign up</strong>
+                </header>
+                <div className="product-hero">
+                  <h3>Pay attention to the work.</h3>
+                  <p>Earn clarity. Stay in control.</p>
+                  <button type="button">Get started</button>
+                </div>
+                <div className="product-cards">
+                  {["Lock", "Check", "Export"].map((label) => (
+                    <span key={label}>
+                      <i />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <figcaption>Product · centered offer and cards</figcaption>
+            </figure>
           </div>
         </div>
       </div>
