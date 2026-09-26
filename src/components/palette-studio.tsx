@@ -447,7 +447,11 @@ export function PaletteStudio() {
         <section className={harmony === "gradient" && gradients.length > 0 ? "stage has-ramps" : "stage"}>
           <div className="intro-copy">
             <p className="eyebrow">Palette studio</p>
-            <h1>Five colors. Lock what you love.</h1>
+            <h1>
+              Five colors.
+              <br />
+              Lock what you love.
+            </h1>
             <p className="sub">
               Space shuffles everything that is not locked. Click a hex, RGB, or HSL value to copy it.
               Contrast is checked against dark text, light text, and the canvas.
