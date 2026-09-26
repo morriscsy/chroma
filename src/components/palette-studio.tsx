@@ -570,25 +570,6 @@ export function PaletteStudio() {
           </section>
         </section>
 
-        <div className="palette-rail" role="group" aria-label="All five swatches">
-          {palette.map((swatch, index) => (
-            <button
-              key={index}
-              type="button"
-              className="rail-swatch"
-              style={{ backgroundColor: swatch.hex }}
-              aria-pressed={selected === index}
-              aria-label={`Show swatch ${index + 1}, ${swatch.hex}${locks[index] ? ", locked" : ""}`}
-              onClick={() => {
-                setSelected(index);
-                document.getElementById(`swatch-${index + 1}`)?.scrollIntoView({ block: "nearest" });
-              }}
-            >
-              {locks[index] ? <span className="rail-lock" /> : null}
-            </button>
-          ))}
-        </div>
-
         <section className="plates" data-open={platesOpen ? "true" : "false"}>
           <div className="grid-head">
             <button
