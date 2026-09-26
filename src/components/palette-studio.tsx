@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { flushSync } from "react-dom";
 import { Check, ChevronDown, Copy, Download, Lock, Shuffle, Undo2, Unlock } from "lucide-react";
 import {
   CANVAS,
@@ -109,6 +110,7 @@ export function PaletteStudio() {
   const historyRef = useRef<Swatch[][]>([]);
   const sliderDirty = useRef(false);
   const toastTimer = useRef<number>(0);
+  const platesStageRef = useRef<HTMLDivElement>(null);
   paletteRef.current = palette;
   locksRef.current = locks;
   harmonyRef.current = harmony;
@@ -303,6 +305,34 @@ export function PaletteStudio() {
   function unlockAll() {
     setLocks([false, false, false, false, false]);
     flash("Unlocked all swatches", "unlock");
+  }
+
+  function setPlates(next: boolean) {
+    if (next === platesOpen) return;
+    const stage = platesStageRef.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!stage || reduce) {
+      setPlatesOpen(next);
+      return;
+    }
+    const from = stage.getBoundingClientRect().height;
+    flushSync(() => setPlatesOpen(next));
+    const to = stage.getBoundingClientRect().height;
+    if (Math.abs(to - from) < 1) return;
+    stage.style.overflow = "hidden";
+    stage.style.transition = "none";
+    stage.style.height = `${from}px`;
+    void stage.offsetHeight;
+    stage.style.transition = "height 0.48s cubic-bezier(0.22, 1, 0.36, 1)";
+    stage.style.height = `${to}px`;
+    const done = (event: TransitionEvent) => {
+      if (event.propertyName !== "height") return;
+      stage.style.height = "";
+      stage.style.overflow = "";
+      stage.style.transition = "";
+      stage.removeEventListener("transitionend", done);
+    };
+    stage.addEventListener("transitionend", done);
   }
 
   function selectHarmony(next: Harmony) {
@@ -576,105 +606,115 @@ export function PaletteStudio() {
 
         <section className="plates" data-open={platesOpen ? "true" : "false"}>
           <div className="grid-head">
-            <p className="kind">{lockedCount === 0 ? "None locked" : `${lockedCount} locked`}</p>
-            <div className="plates-actions">
-              <button
-                type="button"
-                className="plates-toggle"
-                aria-expanded={platesOpen}
-                onClick={() => setPlatesOpen((open) => !open)}
-              >
-                {platesOpen ? "Hide values" : "Expand colors"}
-                <ChevronDown />
-              </button>
-              <button type="button" className="btn-text" onClick={unlockAll}>
-                Unlock all
-              </button>
-            </div>
+            <button
+              type="button"
+              className="btn-text plates-unlock"
+              onClick={unlockAll}
+              disabled={lockedCount === 0}
+            >
+              {lockedCount === 0 ? "All unlocked" : `Unlock ${lockedCount}`}
+            </button>
+            <button
+              type="button"
+              className="plates-toggle"
+              aria-expanded={platesOpen}
+              onClick={() => setPlates(!platesOpen)}
+            >
+              {platesOpen ? "Hide values" : "Expand colors"}
+              <ChevronDown />
+            </button>
           </div>
 
-          {platesOpen ? (
-            <div className="swatch-grid">
-              {palette.map((swatch, index) => {
-                const report = contrastReport(swatch);
-                const text = rgbCss(report.bestRgb);
-                const ratioLabel = `${Math.max(report.rows[0]!.ratio, report.rows[1]!.ratio).toFixed(2)}:1`;
-                return (
-                  <article
-                    key={index}
-                    id={`swatch-${index + 1}`}
-                    className="swatch"
-                    data-locked={locks[index] ? "true" : "false"}
-                    data-selected={selected === index ? "true" : "false"}
-                  >
-                    <div
-                      className="swatch-color"
-                      style={{ backgroundColor: swatch.hex, color: text }}
-                      onClick={() => setSelected(index)}
+          <div className="plates-stage" ref={platesStageRef}>
+            {platesOpen ? (
+              <div className="plates-view swatch-grid" key="open">
+                {palette.map((swatch, index) => {
+                  const report = contrastReport(swatch);
+                  const text = rgbCss(report.bestRgb);
+                  const ratioLabel = `${Math.max(report.rows[0]!.ratio, report.rows[1]!.ratio).toFixed(2)}:1`;
+                  return (
+                    <article
+                      key={index}
+                      id={`swatch-${index + 1}`}
+                      className="swatch"
+                      data-locked={locks[index] ? "true" : "false"}
+                      data-selected={selected === index ? "true" : "false"}
                     >
-                      <span className="swatch-index">{index + 1}</span>
-                      <button
-                        type="button"
-                        className="lock-btn"
-                        aria-pressed={locks[index]}
-                        aria-label={`${locks[index] ? "Unlock" : "Lock"} swatch ${index + 1}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleLock(index);
-                        }}
+                      <div
+                        className="swatch-color"
+                        style={{ backgroundColor: swatch.hex, color: text }}
+                        onClick={() => setSelected(index)}
                       >
-                        <LockGlyph locked={Boolean(locks[index])} />
-                      </button>
-                      <span className="sample">
-                        <span className="sample-aa">Aa</span>
-                        <span className="sample-meta">
-                          {report.best === "ink" ? "Dark text" : "Light text"} · {ratioLabel}
+                        <span className="swatch-index">{index + 1}</span>
+                        <button
+                          type="button"
+                          className="lock-btn"
+                          aria-pressed={locks[index]}
+                          aria-label={`${locks[index] ? "Unlock" : "Lock"} swatch ${index + 1}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleLock(index);
+                          }}
+                        >
+                          <LockGlyph locked={Boolean(locks[index])} />
+                        </button>
+                        <span className="sample">
+                          <span className="sample-aa">Aa</span>
+                          <span className="sample-meta">
+                            {report.best === "ink" ? "Dark text" : "Light text"} · {ratioLabel}
+                          </span>
                         </span>
-                      </span>
-                    </div>
-                    <div className="swatch-body">
-                      <CopyValue
-                        kicker="Hex"
-                        value={swatch.hex}
-                        copied={copiedKey === `hex-${index}`}
-                        onCopy={() => {
-                          setSelected(index);
-                          copyText(swatch.hex, `hex-${index}`, `Copied ${swatch.hex}`, swatch.hex);
-                        }}
-                      />
-                      <CopyValue
-                        kicker="RGB"
-                        value={formatRgb(swatch.rgb)}
-                        copied={copiedKey === `rgb-${index}`}
-                        onCopy={() => {
-                          setSelected(index);
-                          copyText(formatRgb(swatch.rgb), `rgb-${index}`, `Copied ${formatRgb(swatch.rgb)}`, swatch.hex);
-                        }}
-                      />
-                      <CopyValue
-                        kicker="HSL"
-                        value={formatHsl(swatch.hsl)}
-                        copied={copiedKey === `hsl-${index}`}
-                        onCopy={() => {
-                          setSelected(index);
-                          copyText(formatHsl(swatch.hsl), `hsl-${index}`, `Copied ${formatHsl(swatch.hsl)}`, swatch.hex);
-                        }}
-                      />
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <button type="button" className="plates-strip" aria-label="Expand colors" onClick={() => setPlatesOpen(true)}>
-              {palette.map((swatch, index) => (
-                <span key={index} className="plates-chip" style={{ backgroundColor: swatch.hex }}>
-                  <span>{index + 1}</span>
-                  {locks[index] ? <span className="rail-lock" /> : null}
-                </span>
-              ))}
-            </button>
-          )}
+                      </div>
+                      <div className="swatch-body">
+                        <CopyValue
+                          kicker="Hex"
+                          value={swatch.hex}
+                          copied={copiedKey === `hex-${index}`}
+                          onCopy={() => {
+                            setSelected(index);
+                            copyText(swatch.hex, `hex-${index}`, `Copied ${swatch.hex}`, swatch.hex);
+                          }}
+                        />
+                        <CopyValue
+                          kicker="RGB"
+                          value={formatRgb(swatch.rgb)}
+                          copied={copiedKey === `rgb-${index}`}
+                          onCopy={() => {
+                            setSelected(index);
+                            copyText(formatRgb(swatch.rgb), `rgb-${index}`, `Copied ${formatRgb(swatch.rgb)}`, swatch.hex);
+                          }}
+                        />
+                        <CopyValue
+                          kicker="HSL"
+                          value={formatHsl(swatch.hsl)}
+                          copied={copiedKey === `hsl-${index}`}
+                          onCopy={() => {
+                            setSelected(index);
+                            copyText(formatHsl(swatch.hsl), `hsl-${index}`, `Copied ${formatHsl(swatch.hsl)}`, swatch.hex);
+                          }}
+                        />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="plates-view plates-strip"
+                key="shut"
+                aria-label="Expand colors"
+                onClick={() => setPlates(true)}
+              >
+                {palette.map((swatch, index) => (
+                  <span key={index} className="plates-chip" style={{ backgroundColor: swatch.hex }}>
+                    <span>{index + 1}</span>
+                    {locks[index] ? <span className="rail-lock" /> : null}
+                  </span>
+                ))}
+              </button>
+            )}
+          </div>
         </section>
 
         <PaletteUses palette={palette} gradient={harmony === "gradient"} />

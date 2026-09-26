@@ -1044,10 +1044,20 @@
     justify-content: space-between;
     gap: 10px;
   }
-  .plates-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .plates-stage {
+    min-width: 0;
+  }
+  .plates-view {
+    animation: plates-in 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .plates-unlock:disabled {
+    color: var(--color-muted);
+    cursor: default;
+  }
+  .plates-unlock:disabled:hover,
+  .plates-unlock:disabled:active {
+    background: transparent;
+    scale: 1;
   }
   .plates-toggle {
     display: inline-flex;
@@ -1595,6 +1605,17 @@
   }
 }
 
+@keyframes plates-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes brand-dot {
   0%,
   100% {
@@ -1663,7 +1684,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .brand-dot,
-  .mode-pill {
+  .mode-pill,
+  .plates-view {
     animation: none;
   }
   .mode-pill,
